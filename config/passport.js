@@ -64,7 +64,7 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
   passport.use(new GoogleStrategy({
     clientID: process.env.GOOGLE_CLIENT_ID,
     clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-    callbackURL: process.env.GOOGLE_REDIRECT_URI || 'http://localhost:3003/auth/google/callback'
+    callbackURL: process.env.GOOGLE_REDIRECT_URI || 'https://goalsync-backend-y5yt.onrender.com/auth/google/callback'
   }, async (accessToken, refreshToken, profile, done) => {
   try {
     // Check if user account exists
@@ -116,7 +116,7 @@ if (process.env.OUTLOOK_CLIENT_ID && process.env.OUTLOOK_CLIENT_SECRET) {
   passport.use(new MicrosoftStrategy({
     clientID: process.env.OUTLOOK_CLIENT_ID,
     clientSecret: process.env.OUTLOOK_CLIENT_SECRET,
-    callbackURL: process.env.OUTLOOK_REDIRECT_URI || 'http://localhost:3003/auth/microsoft/callback',
+    callbackURL: process.env.OUTLOOK_REDIRECT_URI || 'https://goalsync-backend-y5yt.onrender.com/auth/microsoft/callback',
     scope: ['user.read', 'calendars.read', 'calendars.readwrite']
   }, async (accessToken, refreshToken, profile, done) => {
   try {

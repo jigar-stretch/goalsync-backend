@@ -12,7 +12,7 @@ const tokenStore = new Map();
 // Google OAuth 2.0 configuration
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
 const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET;
-const REDIRECT_URI = 'http://localhost:8080/auth/gmail/callback';
+const REDIRECT_URI = 'https://goal-sync.netlify.app/auth/gmail/callback';
 const SCOPES = [
   'https://www.googleapis.com/auth/userinfo.profile',
   'https://www.googleapis.com/auth/userinfo.email',

@@ -12,7 +12,7 @@ export const googleConfig = {
   clientSecret: process.env.GOOGLE_CLIENT_SECRET,
   
   // Redirect URIs
-  redirectUri: process.env.GOOGLE_REDIRECT_URI || 'http://localhost:8080/auth/gmail/callback',
+  redirectUri: process.env.GOOGLE_REDIRECT_URI || 'https://goal-sync.netlify.app/auth/gmail/callback',
   
   // OAuth 2.0 Scopes
   scopes: [
