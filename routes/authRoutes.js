@@ -1,7 +1,9 @@
 import express from 'express';
 import passport from 'passport';
-import authController from '../controllers/authController.js';
+import authController, { default as AuthController } from '../controllers/authController.js';
 import jwtUtils from '../utils/jwt.js';
+import User from '../models/User.js';
+import { authenticateToken, extractDeviceInfo } from '../middleware/auth.js';
 
 const router = express.Router();
 
@@ -16,16 +18,18 @@ router.get('/google',
 
 router.get('/google/callback',
   passport.authenticate('google', { failureRedirect: '/login?error=google_auth_failed' }),
+  extractDeviceInfo,
   async (req, res) => {
     try {
       const user = req.user;
-      const deviceInfo = authController.extractDeviceInfo(req);
+      const deviceInfo = req.deviceInfo;
       
       // Generate tokens
       const tokenPair = jwtUtils.generateTokenPair({
         userId: user._id,
         email: user.email,
-        deviceId: deviceInfo.deviceId
+        onboardingCompleted: user.onboardingCompleted,
+        deviceId: deviceInfo.deviceId || AuthController.extractDeviceInfo(req).deviceId
       });
 
       // Create session
@@ -38,7 +42,8 @@ router.get('/google/callback',
       res.redirect(redirectUrl);
     } catch (error) {
       console.error('Google callback error:', error);
-      res.redirect('/login?error=callback_failed');
+      const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+      res.redirect(`${frontendUrl}/login?error=callback_failed`);
     }
   }
 );
@@ -53,16 +58,18 @@ router.get('/outlook',
 
 router.get('/outlook/callback',
   passport.authenticate('microsoft', { failureRedirect: '/login?error=outlook_auth_failed' }),
+  extractDeviceInfo,
   async (req, res) => {
     try {
       const user = req.user;
-      const deviceInfo = authController.extractDeviceInfo(req);
+      const deviceInfo = req.deviceInfo;
       
       // Generate tokens
       const tokenPair = jwtUtils.generateTokenPair({
         userId: user._id,
         email: user.email,
-        deviceId: deviceInfo.deviceId
+        onboardingCompleted: user.onboardingCompleted,
+        deviceId: deviceInfo.deviceId || AuthController.extractDeviceInfo(req).deviceId
       });
 
       // Create session
@@ -75,7 +82,8 @@ router.get('/outlook/callback',
       res.redirect(redirectUrl);
     } catch (error) {
       console.error('Outlook callback error:', error);
-      res.redirect('/login?error=callback_failed');
+      const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+      res.redirect(`${frontendUrl}/login?error=callback_failed`);
     }
   }
 );
@@ -91,38 +99,5 @@ router.post('/reset-password', authController.resetPassword);
 
 // Email verification
 router.post('/verify-email', authController.verifyEmail);
-
-// Authentication middleware
-async function authenticateToken(req, res, next) {
-  try {
-    const authHeader = req.headers.authorization;
-    const token = authHeader && authHeader.split(' ')[1];
-
-    if (!token) {
-      return res.status(401).json({
-        success: false,
-        message: 'Access token required'
-      });
-    }
-
-    const decoded = jwtUtils.verifyAccessToken(token);
-    const user = await User.findById(decoded.userId);
-    
-    if (!user || !user.isActive) {
-      return res.status(401).json({
-        success: false,
-        message: 'Invalid token or user inactive'
-      });
-    }
-
-    req.user = user;
-    next();
-  } catch (error) {
-    return res.status(401).json({
-      success: false,
-      message: 'Invalid or expired token'
-    });
-  }
-}
 
 export default router; 

@@ -31,12 +31,17 @@ class SocketService {
         
         // Get user details
         const user = await User.findById(decoded.userId);
+        console.log('👤 User:', user);
         if (!user || !user.isActive) {
           return next(new Error('User not found or inactive'));
         }
 
-        // Update last active
-        await user.updateLastActive();
+        // Update last active - FIXED: Use updateOne to avoid validation
+        await User.updateOne(
+          { _id: decoded.userId },
+          { lastActive: new Date() },
+          { runValidators: false }
+        );
 
         // Attach user to socket
         socket.user = user;

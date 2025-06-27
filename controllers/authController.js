@@ -44,6 +44,23 @@ class AuthController {
       });
       await user.save();
 
+      // Create default profile and settings with safe defaults
+      await UserProfile.create({
+        userId: user._id,
+        displayName: name.trim(),
+        // Set safe defaults for enum fields to avoid validation errors
+        gender: 'prefer-not-to-say',
+        experience: 'entry-level',
+        productivityMetrics: {
+          preferredWorkStyle: 'flexible',
+          motivationType: 'progress'
+        }
+      });
+
+      await UserSettings.create({
+        userId: user._id
+      });
+
       // Create user account
       const userAccount = new UserAccount({
         userId: user._id,
@@ -55,7 +72,7 @@ class AuthController {
       await userAccount.save();
 
       // Generate tokens
-      const deviceInfo = this.extractDeviceInfo(req);
+      const deviceInfo = AuthController.extractDeviceInfo(req);
       const tokenPair = jwtUtils.generateTokenPair({
         userId: user._id,
         email: user.email,
@@ -129,7 +146,7 @@ class AuthController {
       }
 
       // Generate tokens
-      const deviceInfo = this.extractDeviceInfo(req);
+      const deviceInfo = AuthController.extractDeviceInfo(req);
       const tokenPair = jwtUtils.generateTokenPair({
         userId: user._id,
         email: user.email,
@@ -522,7 +539,7 @@ class AuthController {
       }
 
       // Generate JWT tokens
-      const deviceInfo = this.extractDeviceInfo(req);
+      const deviceInfo = AuthController.extractDeviceInfo(req);
       const tokenPair = jwtUtils.generateTokenPair({
         userId: user._id,
         email: user.email,
@@ -558,7 +575,7 @@ class AuthController {
   /**
    * Extract device information from request
    */
-  extractDeviceInfo(req) {
+  static extractDeviceInfo(req) {
     const userAgent = req.get('User-Agent') || 'Unknown';
     const ip = req.ip || 'Unknown';
     

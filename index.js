@@ -28,10 +28,31 @@ import configureSocket from './sockets/io.js';
 const app = express();
 const httpServer = createServer(app);
 
-// Initialize Socket.IO with CORS
+// Environment variables validation
+const requiredEnvVars = ['JWT_SECRET', 'JWT_REFRESH_SECRET', 'MONGODB_URI'];
+const missingEnvVars = requiredEnvVars.filter(varName => !process.env[varName]);
+
+if (missingEnvVars.length > 0) {
+  console.error('❌ Missing required environment variables:', missingEnvVars.join(', '));
+  console.error('Please check your .env file and ensure all required variables are set.');
+  process.exit(1);
+}
+
+// Frontend URL configuration
+const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:8080';
+const ALLOWED_ORIGINS = [
+  FRONTEND_URL,
+  'http://localhost:8080',
+  'http://localhost:3000',
+  'http://127.0.0.1:8080',
+  'http://127.0.0.1:3000',
+  'https://goalsync.vercel.app',
+];
+
+// Initialize Socket.IO with proper CORS
 const io = new Server(httpServer, {
   cors: {
-    origin: process.env.FRONTEND_URL || "http://localhost:5173",
+    origin: true,
     methods: ["GET", "POST"],
     credentials: true
   }
@@ -58,10 +79,20 @@ app.use('/api/', limiter);
 
 // CORS configuration
 app.use(cors({
-  origin: process.env.FRONTEND_URL || "http://localhost:5173",
+  origin: function (origin, callback) {
+    // Allow requests with no origin (mobile apps, etc.)
+    if (!origin) return callback(null, true);
+    
+    if (ALLOWED_ORIGINS.includes(origin)) {
+      return callback(null, true);
+    } else {
+      console.warn(`Blocked CORS request from origin: ${origin}`);
+      return callback(new Error('Not allowed by CORS'));
+    }
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'Cookie']
+  allowedHeaders: ['Content-Type', 'Authorization', 'Cookie', 'X-Requested-With']
 }));
 
 // Body parsing middleware
@@ -69,9 +100,9 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(cookieParser());
 
-// Session configuration
+// Session configuration (for OAuth flows only)
 app.use(session({
-  secret: process.env.JWT_SECRET || 'fallback-secret-key',
+  secret: process.env.JWT_SECRET,
   resave: false,
   saveUninitialized: false,
   store: MongoStore.create({
@@ -81,11 +112,12 @@ app.use(session({
   cookie: {
     secure: process.env.NODE_ENV === 'production',
     httpOnly: true,
-    maxAge: 24 * 60 * 60 * 1000 // 1 day
+    maxAge: 24 * 60 * 60 * 1000, // 1 day
+    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax'
   }
 }));
 
-// Passport middleware
+// Passport middleware (for OAuth only)
 app.use(passport.initialize());
 app.use(passport.session());
 
@@ -101,7 +133,11 @@ app.get('/health', (req, res) => {
     status: 'healthy',
     timestamp: new Date().toISOString(),
     uptime: process.uptime(),
-    environment: process.env.NODE_ENV || 'development'
+    environment: process.env.NODE_ENV || 'development',
+    cors: {
+      allowedOrigins: ALLOWED_ORIGINS,
+      frontendUrl: FRONTEND_URL
+    }
   });
 });
 
@@ -139,7 +175,8 @@ const PORT = process.env.PORT || 3003;
 httpServer.listen(PORT, () => {
   console.log(`🚀 GoalSync Backend Server running on port ${PORT}`);
   console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
-  console.log(`🌐 Frontend URL: ${process.env.FRONTEND_URL || 'http://localhost:5173'}`);
+  console.log(`🌐 Frontend URL: ${FRONTEND_URL}`);
+  console.log(`🔗 Allowed Origins: ${ALLOWED_ORIGINS.join(', ')}`);
   console.log(`💾 Database: Connected to MongoDB`);
   console.log(`🔌 Socket.IO: Enabled for real-time communication`);
 });

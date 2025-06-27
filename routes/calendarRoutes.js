@@ -18,19 +18,23 @@ async function authenticateToken(req, res, next) {
       });
     }
 
+    // Verify token
     const decoded = jwtUtils.verifyAccessToken(token);
+    
+    // Find user
     const user = await User.findById(decoded.userId);
     
     if (!user || !user.isActive) {
       return res.status(401).json({
         success: false,
-        message: 'Invalid token or user inactive'
+        message: 'Invalid or expired token'
       });
     }
 
     req.user = user;
     next();
   } catch (error) {
+    console.error('Authentication error:', error);
     return res.status(401).json({
       success: false,
       message: 'Invalid or expired token'

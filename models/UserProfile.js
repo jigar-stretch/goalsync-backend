@@ -177,11 +177,7 @@ const userProfileSchema = new mongoose.Schema({
       enum: ['detailed', 'simple', 'visual', 'numerical'],
       default: 'simple'
     },
-    reminderFrequency: {
-      type: String,
-      enum: ['daily', 'weekly', 'monthly', 'custom'],
-      default: 'weekly'
-    }
+
   },
 
   // Profile completion
@@ -751,6 +747,28 @@ userProfileSchema.statics.getTopPerformers = function(limit = 10) {
   })
   .sort({ productivityScore: -1, totalGoalsCompleted: -1 })
   .limit(limit);
+};
+
+userProfileSchema.statics.findOrCreateByUserId = async function(userId) {
+  try {
+    let profile = await this.findOne({ userId, deletedAt: null });
+    
+    if (!profile) {
+      profile = new this({
+        userId,
+        profileCompletion: {
+          percentage: 0,
+          lastUpdated: new Date(),
+          completedSections: []
+        }
+      });
+      await profile.save();
+    }
+    
+    return profile;
+  } catch (error) {
+    throw new Error(`Failed to find or create user profile: ${error.message}`);
+  }
 };
 
 // Pre-save middleware

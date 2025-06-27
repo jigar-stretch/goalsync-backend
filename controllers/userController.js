@@ -190,8 +190,7 @@ class UserController {
         deadline,
         weeklyTimeCommitment,
         preferredWorkingHours,
-        aiEnabled,
-        reminderFrequency
+        aiEnabled
       } = req.body;
 
       // Update user with onboarding data
@@ -203,7 +202,6 @@ class UserController {
         weeklyTimeCommitment,
         preferredWorkingHours,
         aiEnabled,
-        reminderFrequency,
         onboardingCompleted: true
       };
 

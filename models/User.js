@@ -298,14 +298,7 @@ const userSchema = new mongoose.Schema({
     type: Boolean,
     default: true
   },
-  reminderFrequency: {
-    type: String,
-    enum: {
-      values: ['daily', 'weekly', 'none'],
-      message: 'Reminder frequency must be daily, weekly, or none'
-    },
-    default: 'daily'
-  },
+
   
   // Schema versioning
   schemaVersion: {
@@ -411,6 +404,16 @@ userSchema.methods.updateLastLogin = function() {
   return this.save();
 };
 
+userSchema.methods.updateLastActive = function() {
+  this.lastActive = new Date();
+  // Use updateOne to avoid running validation
+  return this.constructor.updateOne(
+    { _id: this._id },
+    { lastActive: this.lastActive },
+    { runValidators: false }
+  );
+};
+
 userSchema.methods.softDelete = function() {
   this.deletedAt = new Date();
   this.isActive = false;
@@ -421,6 +424,16 @@ userSchema.methods.restore = function() {
   this.deletedAt = null;
   this.isActive = true;
   return this.save();
+};
+
+userSchema.methods.toSafeObject = function() {
+  const obj = this.toObject();
+  delete obj.password;
+  delete obj.verificationToken;
+  delete obj.resetPasswordToken;
+  delete obj.emailVerificationToken;
+  delete obj.__v;
+  return obj;
 };
 
 // Static methods
@@ -483,11 +496,21 @@ userSchema.pre('save', async function(next) {
   if (!this.username && this.email) {
     const baseUsername = this.email.split('@')[0].toLowerCase();
     let username = baseUsername;
+    
+    // Ensure username is at least 3 characters
+    if (username.length < 3) {
+      username = username + '123'; // Pad with numbers to meet minimum length
+    }
+    
     let counter = 1;
     
     // Ensure username is unique
     while (await this.constructor.findOne({ username, _id: { $ne: this._id } })) {
       username = `${baseUsername}${counter}`;
+      // Ensure the numbered version is also at least 3 characters
+      if (username.length < 3) {
+        username = `${baseUsername}${counter}x`;
+      }
       counter++;
     }
     
